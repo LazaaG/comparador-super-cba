@@ -26,9 +26,9 @@ jobs:
       matrix:
         chain: [disco, jumbo, vea, changomas, dino, mami, carrefour]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -47,7 +47,7 @@ jobs:
           if [ -n "$LIMIT" ]; then ARGS="$ARGS --limit-categories $LIMIT"; fi
           python -m scrapers $ARGS
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: partial-${{ matrix.chain }}
           path: data/partials/${{ matrix.chain }}.sqlite
@@ -59,8 +59,8 @@ jobs:
     if: always()  # mergea aunque alguna cadena falle
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -81,7 +81,7 @@ jobs:
           flyctl ssh sftp get /data/precios.sqlite data/precios.sqlite \
             -a "$FLY_APP" || echo "Sin DB previa en Fly, mergeamos de cero"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: data/partials
           pattern: partial-*
@@ -97,7 +97,7 @@ jobs:
         run: |
           python -c "import sqlite3; c=sqlite3.connect('data/precios.sqlite'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.execute('PRAGMA journal_mode=DELETE'); c.close()"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: precios-merged
           path: data/precios.sqlite
@@ -108,7 +108,7 @@ jobs:
     needs: merge
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: precios-merged
           path: data
