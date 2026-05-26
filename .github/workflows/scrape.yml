@@ -71,6 +71,18 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Wake Fly VM (auto_stop activo)
+        run: |
+          # SFTP/SSH requieren VM started. min_machines_running=0 la apaga tras
+          # inactividad. Un HTTP request la despierta antes del SFTP.
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 20 "https://${FLY_APP}.fly.dev/" > /dev/null; then
+              echo "VM awake (intento $i)"; break
+            fi
+            echo "VM dormida, retry $i/5..."; sleep 5
+          done
+          sleep 3  # darle margen para que SSH/SFTP esté disponible
+
       - name: Bootstrap DB desde Fly (preserva histórico)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -115,14 +127,22 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Wake Fly VM
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 20 "https://${FLY_APP}.fly.dev/" > /dev/null; then
+              echo "VM awake (intento $i)"; break
+            fi
+            echo "VM dormida, retry $i/5..."; sleep 5
+          done
+          sleep 3
+
       - name: Upload + atomic rename
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          # 1) Subir como .new al volumen
-          flyctl ssh sftp shell -a "$FLY_APP" <<'EOF'
-          put data/precios.sqlite /data/precios.sqlite.new
-          EOF
+          # 1) Subir como .new al volumen (usa subcomando `put` directo)
+          flyctl ssh sftp put data/precios.sqlite /data/precios.sqlite.new -a "$FLY_APP"
           # 2) Rename atómico (POSIX). Requests in-flight siguen con inode viejo;
           # próxima request abre inode nuevo (api/deps.py reabre conexión por request).
           flyctl ssh console -a "$FLY_APP" -C "mv /data/precios.sqlite.new /data/precios.sqlite"
