@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Base reset & tipográfico ---------- */
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: theme('colors.paper.DEFAULT');
+  color: theme('colors.ink.DEFAULT');
+  font-family: theme('fontFamily.sans');
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+}
+
+/* Fraunces para títulos editoriales: optical-sizing para que respire en tamaños grandes */
+.font-serif {
+  font-optical-sizing: auto;
+  font-variation-settings: 'opsz' 72, 'SOFT' 30;
+}
+
+/* Selección con tono terracota tenue */
+::selection {
+  background-color: rgba(181, 87, 46, 0.18);
+  color: theme('colors.ink.DEFAULT');
+}
+
+/* Focus visible accesible y tintado a la marca */
+:focus-visible {
+  outline: 2px solid theme('colors.terra.DEFAULT');
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Botones y links — feedback de press en cualquier elemento interactivo */
+button,
+[role='button'],
+a {
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+button:active,
+[role='button']:active {
+  transform: scale(0.97);
+}
+
+/* Skeleton shimmer con paleta cálida — papel tenue, no gris frío */
+.shimmer-warm {
+  background-image: linear-gradient(
+    90deg,
+    theme('colors.paper.dim') 0%,
+    theme('colors.paper.deep') 50%,
+    theme('colors.paper.dim') 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-warm 1.6s linear infinite;
+}
+
+/* Hairline divider sutil reutilizable */
+.hairline {
+  border-color: rgba(31, 26, 20, 0.08);
+}
+
+/* Reduced motion: respetar */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Componentes utilitarios ---------- */
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium
+      bg-terra text-paper shadow-paper-sm
+      hover:bg-terra-deep
+      disabled:opacity-50 disabled:cursor-not-allowed
+      transition-colors;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium
+      bg-transparent text-ink border border-paper-deep
+      hover:bg-paper-dim
+      disabled:opacity-50;
+  }
+
+  .input-text {
+    @apply w-full rounded-md bg-paper border border-paper-deep
+      px-4 py-3 text-base text-ink placeholder:text-ink-faint
+      focus:border-terra focus:ring-0 focus:outline-none
+      transition-colors;
+  }
+
+  /* Hairline horizontal con un toque de calidez */
+  .divider {
+    @apply h-px bg-paper-deep;
+  }
+}

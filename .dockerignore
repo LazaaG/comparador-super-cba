@@ -1,0 +1,38 @@
+# Python local
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+
+# Git + GH
+.git/
+.github/
+.gitignore
+
+# Frontend (no es parte del backend container)
+web/
+node_modules/
+
+# Tests + docs (no necesarios runtime)
+tests/
+docs/
+*.md
+
+# DB local (la imagen NO la lleva, viene del volumen)
+data/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Plan files
+*.plan

@@ -1,0 +1,42 @@
+# Fly.io config — backend FastAPI del comparador.
+# App name único globalmente. Si "comparador-super-cba" está tomado al
+# crear app, ajustar acá y en ALLOWED_ORIGINS / Vercel env vars.
+app = "comparador-super-cba"
+primary_region = "gru"  # São Paulo — única region LATAM disponible. scl cerrado.
+kill_signal = "SIGINT"
+kill_timeout = "5s"
+
+[build]
+
+[env]
+  SUPER_DB_PATH = "/data/precios.sqlite"
+  # ALLOWED_ORIGINS se setea por `fly secrets set` después del primer deploy
+  # de Vercel (cuando sabemos el dominio definitivo). Default = localhost.
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0  # cold start ~3-5s, free tier friendly
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 100
+    hard_limit = 200
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/"  # root sirve sin DB, /health requiere DB seedeada
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"  # 256 ajustado para FastAPI+pandas; bump a 1gb si OOM

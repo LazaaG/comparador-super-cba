@@ -1,0 +1,133 @@
+name: Scrape diario
+
+on:
+  schedule:
+    - cron: "0 10 * * *"  # 10:00 UTC = 07:00 ART
+  workflow_dispatch:
+    inputs:
+      limit_categories:
+        description: "Cap de categorías por cadena (smoke test)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read  # DB ya no se commitea; vive en volumen Fly
+
+env:
+  PYTHONUNBUFFERED: "1"
+  FLY_APP: comparador-super-cba
+
+jobs:
+  scrape:
+    name: Scrape ${{ matrix.chain }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # una cadena rota no aborta el resto
+      matrix:
+        chain: [disco, jumbo, vea, changomas, dino, mami, carrefour]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Scrape ${{ matrix.chain }}
+        env:
+          LIMIT: ${{ github.event.inputs.limit_categories }}
+        run: |
+          mkdir -p data/partials
+          ARGS="--chain ${{ matrix.chain }} --db data/partials/${{ matrix.chain }}.sqlite"
+          if [ -n "$LIMIT" ]; then ARGS="$ARGS --limit-categories $LIMIT"; fi
+          python -m scrapers $ARGS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: partial-${{ matrix.chain }}
+          path: data/partials/${{ matrix.chain }}.sqlite
+          retention-days: 7
+
+  merge:
+    name: Merge parciales
+    needs: scrape
+    if: always()  # mergea aunque alguna cadena falle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Bootstrap DB desde Fly (preserva histórico)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          mkdir -p data
+          # Bajamos DB previa del volumen Fly para mergear deltas encima.
+          # Si no existe (primer run), seguimos con DB vacía.
+          flyctl ssh sftp get /data/precios.sqlite data/precios.sqlite \
+            -a "$FLY_APP" || echo "Sin DB previa en Fly, mergeamos de cero"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: data/partials
+          pattern: partial-*
+          merge-multiple: true
+
+      - name: Merge parciales en DB target
+        run: |
+          python -m scripts.merge_partials \
+            --target data/precios.sqlite \
+            --partials-dir data/partials
+
+      - name: WAL checkpoint (single-file para SFTP)
+        run: |
+          python -c "import sqlite3; c=sqlite3.connect('data/precios.sqlite'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.execute('PRAGMA journal_mode=DELETE'); c.close()"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: precios-merged
+          path: data/precios.sqlite
+          retention-days: 14
+
+  deploy-db:
+    name: Deploy DB → Fly (atomic swap)
+    needs: merge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: precios-merged
+          path: data
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Upload + atomic rename
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          # 1) Subir como .new al volumen
+          flyctl ssh sftp shell -a "$FLY_APP" <<'EOF'
+          put data/precios.sqlite /data/precios.sqlite.new
+          EOF
+          # 2) Rename atómico (POSIX). Requests in-flight siguen con inode viejo;
+          # próxima request abre inode nuevo (api/deps.py reabre conexión por request).
+          flyctl ssh console -a "$FLY_APP" -C "mv /data/precios.sqlite.new /data/precios.sqlite"
+
+      - name: Smoke test post-deploy
+        run: |
+          sleep 3
+          curl -fsS "https://${FLY_APP}.fly.dev/health"
