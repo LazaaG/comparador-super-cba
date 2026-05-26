@@ -25,20 +25,19 @@ El foco es **Córdoba, Argentina**, e incluye tanto las grandes cadenas nacional
 
 ## Supermercados incluidos
 
-| Supermercado | Estado |
-|---|---|
-| Disco | ✅ |
-| Jumbo | ✅ |
-| Vea | ✅ |
-| Hiper Libertad | ✅ |
-| Carrefour | ✅ |
-| Carrefour Express | ✅ |
-| ChangoMas | ✅ |
-| Dino Online | ✅ |
-| Super MAMI | ✅ |
-| Tadicor | ❌ *(no tiene tienda online; ver más abajo)* |
+| Supermercado | Estado | Plataforma |
+|---|---|---|
+| Disco | ✅ | VTEX |
+| Jumbo | ✅ | VTEX |
+| Vea | ✅ | VTEX |
+| ChangoMas | ✅ | VTEX (`masonline.com.ar`) |
+| Carrefour | ✅ | VTEX (vía TLS impersonation `curl_cffi`) |
+| Dino Online | ✅ | Oracle Commerce / Endeca |
+| Super MAMI | ✅ | Oracle Commerce / Endeca |
+| Hiper Libertad | ❌ | Sin e-commerce funcional en el dominio (ver `docs/hiper-libertad-investigation.md`) |
+| Tadicor | ❌ | Sin tienda online (precios en folletos / redes) |
 
-> **¿Por qué Tadicor no está?** No tiene una tienda online con carrito: sus precios viven en folletos y redes sociales, así que no se pueden leer de forma automática y confiable. Quedó fuera para no comprometer la calidad de los datos.
+> **¿Por qué Hiper Libertad y Tadicor no están?** Ninguno tiene tienda online con carrito accesible. Sus precios viven en folletos / redes / landings estáticos. Quedaron fuera para no comprometer la calidad de los datos.
 
 ---
 
@@ -73,35 +72,65 @@ Si te interesa el detalle técnico completo (endpoints, arquitectura, decisiones
 
 ---
 
-## Estado del proyecto
+## Live en producción
 
-🚧 **En desarrollo.** Este repositorio arranca desde una etapa de diseño con la arquitectura ya definida. El desarrollo está planificado por fases:
+- 🌐 **App**: https://comparador-super-cba.vercel.app
+- 🔧 **API**: https://comparador-super-cba.fly.dev
+- 📦 **Repo**: https://github.com/LazaaG/comparador-super-cba
 
-1. Confirmar el acceso a los datos de cada cadena.
-2. Lector de precios de las cadenas grandes + base de datos.
-3. Lógica de comparación de carrito + API.
-4. Lector de precios de Dino y Super MAMI.
-5. Automatización diaria.
-6. Interfaz web.
+Los precios se relevan automáticamente todos los días a las **7 AM hora Argentina** (10:00 UTC) vía GitHub Actions. Sin intervención manual.
 
 ---
 
-## Cómo empezar (para desarrolladores)
+## Estado del proyecto
 
-> Requisitos previstos: Python 3.10+
+✅ **MVP en producción.** 7 cadenas relevadas, cron diario activo:
+
+- Disco, Jumbo, Vea, ChangoMas, Carrefour (VTEX)
+- Dino Online, Super MAMI (Oracle Commerce / Endeca)
+
+---
+
+## Stack técnico
+
+| Capa | Tecnología | Hosting |
+|---|---|---|
+| Frontend | Next.js 14 + TypeScript + Tailwind + zustand | Vercel |
+| Backend API | FastAPI + Python 3.13 | Fly.io (region `gru`) |
+| Base de datos | SQLite read-only en volumen persistente | Fly.io volume `data` |
+| Scrapers | Python async + `httpx` / `curl_cffi` (TLS impersonation Carrefour) | GitHub Actions runners |
+| Cron diario | GitHub Actions `0 10 * * *` UTC | matrix de 7 jobs paralelos |
+
+---
+
+## Cómo correr localmente
+
+Requisitos: Python 3.11+, Node 20+, `npm`.
 
 ```bash
-# Clonar el repo
-git clone <url-del-repo>
+# Backend
+git clone https://github.com/LazaaG/comparador-super-cba.git
 cd comparador-super-cba
+python -m venv .venv
+.venv/Scripts/python.exe -m pip install -e ".[dev]"
 
-# Instalar dependencias
-pip install -r requirements.txt
+# Seedear catálogo de cadenas + scrape de prueba
+.venv/Scripts/python.exe -m storage.seed_chains
+.venv/Scripts/python.exe -m scrapers --chain disco --limit-categories 2
 
-# (instrucciones de ejecución a completar a medida que avanza el desarrollo)
+# API
+.venv/Scripts/python.exe -m uvicorn api.main:app --reload --port 8000
 ```
 
-Antes de programar los lectores de precios hay dos verificaciones rápidas que hacer (están detalladas en `CLAUDE.md`, "Fase 0"): confirmar las direcciones reales de cada tienda online y revisar cómo entrega los datos la tienda de Dino. Son los únicos pasos que requieren una mirada manual; el resto es automático.
+```bash
+# Frontend (otra terminal)
+cd web
+npm install
+cp .env.local.example .env.local
+npm run dev    # http://localhost:3000
+```
+
+Más detalles del flujo de scraping: [`docs/scraping.md`](./docs/scraping.md).
 
 ---
 
