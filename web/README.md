@@ -59,3 +59,4 @@ pnpm test         # vitest one-shot
 pnpm test:watch   # vitest en modo watch
 pnpm lint         # eslint
 ```
+
