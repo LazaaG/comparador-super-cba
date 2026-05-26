@@ -4,9 +4,11 @@ import { search } from '@/lib/api';
 import { ChainBadge } from '@/components/ChainBadge';
 import { AddToCartButton } from '@/components/AddToCartButton';
 import { ProductThumb } from '@/components/ProductThumb';
+import { TrackProductView } from '@/components/analytics/TrackProductView';
+import { TrackedChainLink } from '@/components/analytics/TrackedChainLink';
 import { formatARS, formatUnit, percentDiff, relativeTimeES } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { ArrowLeft, ExternalLink, Trophy } from 'lucide-react';
+import { ArrowLeft, Trophy } from 'lucide-react';
 import type { PriceInChain } from '@/lib/types';
 
 interface PageProps {
@@ -41,6 +43,12 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-content px-6 md:px-8 pt-8 pb-24">
+      <TrackProductView
+        ean={item.ean}
+        brand={item.brand}
+        n_chains={item.prices.length}
+        cheapest_chain={item.cheapest_chain}
+      />
       {/* Breadcrumb minimal */}
       <Link
         href="/buscar"
@@ -96,7 +104,7 @@ export default async function ProductPage({ params }: PageProps) {
           </dl>
 
           <div className="mt-8 pt-6 border-t border-paper-deep/70">
-            <AddToCartButton ean={item.ean} name={item.name} brand={item.brand} />
+            <AddToCartButton ean={item.ean} name={item.name} brand={item.brand} fromPage="producto" />
           </div>
 
           {/* Resumen de ahorro */}
@@ -132,6 +140,7 @@ export default async function ProductPage({ params }: PageProps) {
                 price={p}
                 isWinner={idx === 0}
                 minPrice={winner.price_effective}
+                ean={item.ean}
               />
             ))}
           </ol>
@@ -152,9 +161,10 @@ interface PriceRowProps {
   price: PriceInChain;
   isWinner: boolean;
   minPrice: number;
+  ean: string;
 }
 
-function PriceRow({ price, isWinner, minPrice }: PriceRowProps) {
+function PriceRow({ price, isWinner, minPrice, ean }: PriceRowProps) {
   const hasDiscount = price.price_effective < price.price_list;
   const discountPct = hasDiscount
     ? Math.round(((price.price_list - price.price_effective) / price.price_list) * 100)
@@ -237,15 +247,13 @@ function PriceRow({ price, isWinner, minPrice }: PriceRowProps) {
 
       {price.product_url && (
         <div className="mt-3 pl-12">
-          <a
+          <TrackedChainLink
             href={price.product_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-ink-soft hover:text-terra-deep"
-          >
-            <span>Ver en {price.chain_name}</span>
-            <ExternalLink size={11} strokeWidth={1.75} aria-hidden="true" />
-          </a>
+            chain={price.chain}
+            chainName={price.chain_name}
+            ean={ean}
+            page="producto"
+          />
         </div>
       )}
     </li>

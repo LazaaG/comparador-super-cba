@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PHProvider } from './posthog-provider';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -18,5 +19,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <PHProvider>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </PHProvider>
+  );
 }

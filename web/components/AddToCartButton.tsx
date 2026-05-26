@@ -4,19 +4,27 @@ import { useState } from 'react';
 import { Check, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '@/store/cart';
 import { cn } from '@/lib/cn';
+import { track } from '@/lib/analytics';
 
 interface Props {
   ean: string;
   name: string;
   brand?: string | null;
   compact?: boolean;
+  fromPage?: 'buscar' | 'producto' | 'carrito';
 }
 
 // Botón con dos modos:
 // - Ítem NO en carrito: pill "Agregar" con icono +.
 // - Ítem YA en carrito: stepper minus/qty/plus.
 // La transición entre modos usa blur breve para no sentir el "swap" duro.
-export function AddToCartButton({ ean, name, brand, compact = false }: Props) {
+export function AddToCartButton({
+  ean,
+  name,
+  brand,
+  compact = false,
+  fromPage = 'producto'
+}: Props) {
   const inCart = useCartStore((s) => s.has(ean));
   const qty = useCartStore((s) => s.getQty(ean));
   const add = useCartStore((s) => s.add);
@@ -26,8 +34,14 @@ export function AddToCartButton({ ean, name, brand, compact = false }: Props) {
 
   const handleAdd = () => {
     add({ ean, name, brand: brand ?? null });
+    track('product_added', { ean, from_page: fromPage });
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1200);
+  };
+
+  const handleIncrement = () => {
+    increment(ean);
+    track('product_added', { ean, from_page: fromPage });
   };
 
   if (!inCart) {
@@ -89,7 +103,7 @@ export function AddToCartButton({ ean, name, brand, compact = false }: Props) {
       </span>
       <button
         type="button"
-        onClick={() => increment(ean)}
+        onClick={handleIncrement}
         aria-label="agregar uno más"
         className={cn(
           'inline-flex items-center justify-center text-ink-soft hover:text-terra hover:bg-paper-dim',

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { track } from '@/lib/analytics';
 
 interface Props {
   defaultValue?: string;
@@ -47,6 +48,10 @@ export function SearchBar({
     e.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) return;
+    track('search_submitted', {
+      query: trimmed,
+      is_ean: /^\d{8,14}$/.test(trimmed)
+    });
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('q', trimmed);
     params.delete('offset');

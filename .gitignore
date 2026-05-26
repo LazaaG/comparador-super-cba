@@ -51,3 +51,5 @@ pnpm-debug.log*
 
 # Tests
 /coverage
+
+.vercel

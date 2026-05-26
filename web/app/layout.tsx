@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Inter, JetBrains_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import Providers from './providers';
@@ -57,6 +59,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 w-full">{children}</main>
           <Footer />
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

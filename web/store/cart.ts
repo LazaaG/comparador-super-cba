@@ -87,7 +87,17 @@ export const useCartStore = create<CartState>()(
           };
         }),
 
-      clear: () => set({ items: [], lastAddedAt: null }),
+      clear: () => {
+        const before = get().items.length;
+        if (before > 0) {
+          // Dynamic import: no romper SSR de zustand. analytics.ts hace
+          // SSR-guard pero el import top-level fuerza el bundle del SDK.
+          import('@/lib/analytics').then((m) =>
+            m.track('cart_cleared', { n_items_before: before })
+          );
+        }
+        set({ items: [], lastAddedAt: null });
+      },
 
       has: (ean) => get().items.some((i) => i.ean === ean),
       getQty: (ean) => get().items.find((i) => i.ean === ean)?.qty ?? 0

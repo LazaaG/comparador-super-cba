@@ -16,6 +16,7 @@ import { cn } from '@/lib/cn';
 import { useEffect, useMemo, useState } from 'react';
 import { compareCart } from '@/lib/api';
 import { formatARS } from '@/lib/format';
+import { track } from '@/lib/analytics';
 import type { CartCompareResponse } from '@/lib/types';
 
 export default function CarritoPage() {
@@ -49,7 +50,18 @@ export default function CarritoPage() {
       { items: items.map((i) => ({ ean: i.ean, qty: i.qty })), mode: 'best_effort' },
       ctrl.signal
     )
-      .then((r) => setComparison(r))
+      .then((r) => {
+        setComparison(r);
+        const w = r.ranking[0];
+        if (w) {
+          track('cart_compared', {
+            n_items: items.length,
+            mode: 'best_effort',
+            winner_chain: w.chain,
+            coverage_pct: w.coverage_pct
+          });
+        }
+      })
       .catch((err) => {
         if (err?.name !== 'AbortError') setComparison(null);
       })
@@ -194,7 +206,7 @@ export default function CarritoPage() {
                     </p>
                   </div>
 
-                  <AddToCartButton ean={item.ean} name={item.name} brand={item.brand} compact />
+                  <AddToCartButton ean={item.ean} name={item.name} brand={item.brand} compact fromPage="carrito" />
 
                   {/* Subtotal en la cadena ganadora */}
                   <div className="text-right min-w-[88px]">

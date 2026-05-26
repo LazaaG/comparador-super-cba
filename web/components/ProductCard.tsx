@@ -129,6 +129,7 @@ export function ProductCard({ item }: Props) {
           name={item.name}
           brand={item.brand}
           compact={false}
+          fromPage="buscar"
         />
       </div>
     </article>

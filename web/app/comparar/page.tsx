@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useCartStore } from '@/store/cart';
 import { compareCart } from '@/lib/api';
+import { track } from '@/lib/analytics';
 import { ModeToggle } from '@/components/ModeToggle';
 import { RankingRow } from '@/components/RankingRow';
 import { EmptyState } from '@/components/EmptyState';
@@ -43,6 +44,20 @@ export default function CompararPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
+
+  // Emit cart_compared cuando llega data nueva
+  useEffect(() => {
+    if (!mutation.data) return;
+    const w = mutation.data.ranking[0];
+    if (!w) return;
+    track('cart_compared', {
+      n_items: items.length,
+      mode,
+      winner_chain: w.chain,
+      coverage_pct: w.coverage_pct
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mutation.data]);
 
   if (!mounted) {
     return (
