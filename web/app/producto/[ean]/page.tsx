@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { search } from '@/lib/api';
 import { ChainBadge } from '@/components/ChainBadge';
@@ -8,7 +7,8 @@ import { TrackProductView } from '@/components/analytics/TrackProductView';
 import { TrackedChainLink } from '@/components/analytics/TrackedChainLink';
 import { formatARS, formatUnit, percentDiff, relativeTimeES } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { ArrowLeft, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
+import { BackLink } from '@/components/BackLink';
 import type { PriceInChain } from '@/lib/types';
 
 interface PageProps {
@@ -49,14 +49,8 @@ export default async function ProductPage({ params }: PageProps) {
         n_chains={item.prices.length}
         cheapest_chain={item.cheapest_chain}
       />
-      {/* Breadcrumb minimal */}
-      <Link
-        href="/buscar"
-        className="inline-flex items-center gap-1.5 text-xs text-ink-soft hover:text-ink mb-8"
-      >
-        <ArrowLeft size={14} strokeWidth={1.75} aria-hidden="true" />
-        Volver a la búsqueda
-      </Link>
+      {/* Volver: usa historial del browser para conservar query + scroll */}
+      <BackLink fallbackHref="/buscar" label="Volver a la búsqueda" />
 
       <div className="grid gap-12 md:grid-cols-12 md:gap-16">
         {/* ---------- Info producto ---------- */}
